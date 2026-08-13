@@ -40,7 +40,7 @@ function DestinationDetails() {
     const fetchDestination = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/destinations/${id}`
+          `${import.meta.env.VITE_API_URL}/api/destinations/${id}`
         );
 
         if (!response.ok) {
@@ -81,7 +81,7 @@ function DestinationDetails() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/favorites",
+          `${import.meta.env.VITE_API_URL}/api/favorites`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -136,7 +136,7 @@ function DestinationDetails() {
           Remove saved destination
         */
         const response = await fetch(
-          `http://localhost:5000/api/favorites/${id}`,
+          `${import.meta.env.VITE_API_URL}/api/favorites/${id}`,
           {
             method: "DELETE",
             headers: {
@@ -164,7 +164,7 @@ function DestinationDetails() {
           in the URL.
         */
         const response = await fetch(
-          `http://localhost:5000/api/favorites/${id}`,
+          `${import.meta.env.VITE_API_URL}/api/destinations/${id}`,
           {
             method: "POST",
             headers: {

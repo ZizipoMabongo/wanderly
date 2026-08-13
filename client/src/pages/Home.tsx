@@ -35,7 +35,7 @@ function Home() {
     const fetchDestinations = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/destinations"
+          `${import.meta.env.VITE_API_URL}/api/destinations`
         );
 
         const data = await response.json();
@@ -63,7 +63,7 @@ function Home() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/favorites",
+          `${import.meta.env.VITE_API_URL}/api/favorites`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -114,7 +114,7 @@ function Home() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/favorites/${destinationId}`,
+        `${import.meta.env.VITE_API_URL}/api/favorites/${destinationId}`,
         {
           method: isFavorite ? "DELETE" : "POST",
           headers: {
