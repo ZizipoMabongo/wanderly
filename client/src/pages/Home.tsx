@@ -6,11 +6,14 @@ import "./Home.css";
 interface Destination {
   _id: string;
   name: string;
+  location: string;
   country: string;
   description: string;
   image: string;
   category?: string;
   rating?: number;
+  tags?: string[];
+  priceLevel?: number;
 }
 
 interface Favorite {
@@ -25,12 +28,20 @@ function Home() {
     Destination[]
   >([]);
 
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(
+    []
+  );
+
   const [search, setSearch] = useState("");
+
   const [loading, setLoading] = useState(true);
+
   const [favoriteLoading, setFavoriteLoading] =
     useState<string | null>(null);
 
+  /*
+    Fetch all destinations
+  */
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
@@ -38,7 +49,14 @@ function Home() {
           `${import.meta.env.VITE_API_URL}/api/destinations`
         );
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            "Failed to fetch destinations"
+          );
+        }
+
+        const data: Destination[] =
+          await response.json();
 
         setDestinations(data);
       } catch (error) {
@@ -54,6 +72,9 @@ function Home() {
     fetchDestinations();
   }, []);
 
+  /*
+    Fetch user's saved destinations
+  */
   useEffect(() => {
     const fetchFavorites = async () => {
       if (!token) {
@@ -75,12 +96,16 @@ function Home() {
           return;
         }
 
-        const data: Favorite[] = await response.json();
+        const data: Favorite[] =
+          await response.json();
 
         const savedIds = data
-          .filter((favorite) => favorite.destination)
+          .filter(
+            (favorite) => favorite.destination
+          )
           .map(
-            (favorite) => favorite.destination._id
+            (favorite) =>
+              favorite.destination._id
           );
 
         setFavorites(savedIds);
@@ -95,6 +120,9 @@ function Home() {
     fetchFavorites();
   }, [token]);
 
+  /*
+    Add or remove a destination from favorites
+  */
   const handleFavorite = async (
     event: MouseEvent,
     destinationId: string
@@ -103,7 +131,9 @@ function Home() {
     event.stopPropagation();
 
     if (!token) {
-      alert("Please log in to save destinations.");
+      alert(
+        "Please log in to save destinations."
+      );
       return;
     }
 
@@ -116,7 +146,10 @@ function Home() {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/api/favorites/${destinationId}`,
         {
-          method: isFavorite ? "DELETE" : "POST",
+          method: isFavorite
+            ? "DELETE"
+            : "POST",
+
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -128,7 +161,8 @@ function Home() {
 
       if (!response.ok) {
         alert(
-          data.message || "Something went wrong."
+          data.message ||
+            "Something went wrong."
         );
         return;
       }
@@ -136,7 +170,8 @@ function Home() {
       if (isFavorite) {
         setFavorites((current) =>
           current.filter(
-            (id) => id !== destinationId
+            (id) =>
+              id !== destinationId
           )
         );
       } else {
@@ -146,7 +181,11 @@ function Home() {
         ]);
       }
     } catch (error) {
-      console.error("Favorite error:", error);
+      console.error(
+        "Favorite error:",
+        error
+      );
+
       alert(
         "Unable to update saved destination."
       );
@@ -155,19 +194,50 @@ function Home() {
     }
   };
 
+  /*
+    Search destinations
+
+    Searches through:
+    - destination name
+    - city/location
+    - country
+    - description
+    - category
+    - tags
+  */
+  const searchTerm = search
+    .trim()
+    .toLowerCase();
+
   const filteredDestinations =
     destinations.filter(
-      (destination) =>
-        destination.name
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        destination.country
-          .toLowerCase()
-          .includes(search.toLowerCase())
+      (destination) => {
+        // Show everything when search is empty
+        if (!searchTerm) {
+          return true;
+        }
+
+        const searchableText = [
+          destination.name,
+          destination.location,
+          destination.country,
+          destination.description,
+          destination.category,
+          ...(destination.tags || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(
+          searchTerm
+        );
+      }
     );
 
   return (
     <main className="home-page">
+      {/* HERO SECTION */}
       <section className="hero-section">
         <div className="hero-overlay" />
 
@@ -179,15 +249,19 @@ function Home() {
           <h1>
             Discover places
             <br />
-            <span>worth wandering to.</span>
+            <span>
+              worth wandering to.
+            </span>
           </h1>
 
           <p>
-            Explore beautiful destinations, discover
-            new experiences, and plan your next
-            unforgettable adventure with Wanderly.
+            Explore beautiful destinations,
+            discover new experiences, and plan
+            your next unforgettable adventure
+            with Wanderly.
           </p>
 
+          {/* SEARCH */}
           <div className="hero-search">
             <span className="search-icon">
               🔎
@@ -198,7 +272,9 @@ function Home() {
               placeholder="Where do you want to go?"
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value
+                )
               }
             />
 
@@ -206,7 +282,9 @@ function Home() {
               type="button"
               onClick={() => {
                 document
-                  .getElementById("destinations")
+                  .getElementById(
+                    "destinations"
+                  )
                   ?.scrollIntoView({
                     behavior: "smooth",
                   });
@@ -216,30 +294,50 @@ function Home() {
             </button>
           </div>
 
+          {/* HERO STATS */}
           <div className="hero-stats">
             <div>
-              <strong>50+</strong>
-              <span>Destinations</span>
+              <strong>
+                {destinations.length}+
+              </strong>
+
+              <span>
+                Destinations
+              </span>
             </div>
 
             <div>
-              <strong>100+</strong>
-              <span>Experiences</span>
+              <strong>
+                100+
+              </strong>
+
+              <span>
+                Experiences
+              </span>
             </div>
 
             <div>
-              <strong>4.9</strong>
-              <span>Average rating</span>
+              <strong>
+                4.9
+              </strong>
+
+              <span>
+                Average rating
+              </span>
             </div>
           </div>
         </div>
 
         <div className="hero-scroll">
-          <span>Scroll to explore</span>
+          <span>
+            Scroll to explore
+          </span>
+
           <span>↓</span>
         </div>
       </section>
 
+      {/* DESTINATIONS SECTION */}
       <section
         id="destinations"
         className="destinations-section"
@@ -252,37 +350,56 @@ function Home() {
 
             <h2>
               Find your next
-              <span> adventure.</span>
+              <span>
+                {" "}
+                adventure.
+              </span>
             </h2>
           </div>
 
           <p>
-            From vibrant cities to peaceful escapes,
-            discover destinations that inspire your
-            next journey.
+            From vibrant cities to peaceful
+            escapes, discover destinations that
+            inspire your next journey.
           </p>
         </div>
 
+        {/* LOADING */}
         {loading ? (
           <div className="loading-state">
             <div className="loading-spinner" />
+
             <p>
-              Discovering destinations...
+              Discovering
+              destinations...
             </p>
           </div>
-        ) : filteredDestinations.length ===
+        ) : /* NO SEARCH RESULTS */
+        filteredDestinations.length ===
           0 ? (
           <div className="empty-state">
             <div>🌍</div>
 
-            <h3>No destinations found</h3>
+            <h3>
+              No destinations found
+            </h3>
 
             <p>
-              Try searching for another city or
-              country.
+              We couldn't find a destination
+              matching "{search}".
             </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSearch("")
+              }
+            >
+              Show all destinations
+            </button>
           </div>
         ) : (
+          /* DESTINATION GRID */
           <div className="destination-grid">
             {filteredDestinations.map(
               (destination) => {
@@ -293,25 +410,36 @@ function Home() {
 
                 return (
                   <Link
-                    key={destination._id}
+                    key={
+                      destination._id
+                    }
                     to={`/destinations/${destination._id}`}
                     className="destination-card"
                   >
+                    {/* IMAGE */}
                     <div className="destination-image-wrapper">
                       <img
-                        src={destination.image}
-                        alt={destination.name}
+                        src={
+                          destination.image
+                        }
+                        alt={
+                          destination.name
+                        }
                         className="destination-image"
                       />
 
                       <div className="destination-image-overlay" />
 
+                      {/* CATEGORY */}
                       {destination.category && (
                         <span className="destination-category">
-                          {destination.category}
+                          {
+                            destination.category
+                          }
                         </span>
                       )}
 
+                      {/* FAVORITE */}
                       <button
                         type="button"
                         className={`favorite-button ${
@@ -319,7 +447,9 @@ function Home() {
                             ? "saved"
                             : ""
                         }`}
-                        onClick={(event) =>
+                        onClick={(
+                          event
+                        ) =>
                           handleFavorite(
                             event,
                             destination._id
@@ -344,16 +474,58 @@ function Home() {
                       </span>
                     </div>
 
+                    {/* CARD CONTENT */}
                     <div className="destination-card-content">
                       <div className="destination-location">
-                        📍 {destination.country}
+                        📍{" "}
+                        {
+                          destination.location
+                        }
+                        {destination.country &&
+                          `, ${destination.country}`}
                       </div>
 
-                      <h3>{destination.name}</h3>
+                      <h3>
+                        {
+                          destination.name
+                        }
+                      </h3>
 
                       <p>
-                        {destination.description}
+                        {
+                          destination.description
+                        }
                       </p>
+
+                      {/* TAGS */}
+                      {destination.tags &&
+                        destination.tags
+                          .length >
+                          0 && (
+                          <div className="destination-tags">
+                            {destination.tags
+                              .slice(
+                                0,
+                                3
+                              )
+                              .map(
+                                (
+                                  tag
+                                ) => (
+                                  <span
+                                    key={
+                                      tag
+                                    }
+                                  >
+                                    #
+                                    {
+                                      tag
+                                    }
+                                  </span>
+                                )
+                              )}
+                          </div>
+                        )}
 
                       <div className="destination-card-footer">
                         <span>
@@ -375,6 +547,7 @@ function Home() {
         )}
       </section>
 
+      {/* EXPERIENCE SECTION */}
       <section className="experience-section">
         <div className="experience-content">
           <span className="section-label">
@@ -383,14 +556,18 @@ function Home() {
 
           <h2>
             Travel is about
-            <span> the stories.</span>
+            <span>
+              {" "}
+              the stories.
+            </span>
           </h2>
 
           <p>
-            Wanderly helps you discover places that
-            become memories. Find destinations,
-            explore experiences, and create journeys
-            worth remembering.
+            Wanderly helps you discover places
+            that become memories. Find
+            destinations, explore experiences,
+            and create journeys worth
+            remembering.
           </p>
 
           <Link
@@ -407,8 +584,13 @@ function Home() {
             <span>🌴</span>
 
             <div>
-              <strong>Beach escape</strong>
-              <small>Paradise awaits</small>
+              <strong>
+                Beach escape
+              </strong>
+
+              <small>
+                Paradise awaits
+              </small>
             </div>
           </div>
 
@@ -416,8 +598,13 @@ function Home() {
             <span>🏔️</span>
 
             <div>
-              <strong>Mountain adventure</strong>
-              <small>Find your wild</small>
+              <strong>
+                Mountain adventure
+              </strong>
+
+              <small>
+                Find your wild
+              </small>
             </div>
           </div>
 
@@ -425,8 +612,14 @@ function Home() {
             <span>🌆</span>
 
             <div>
-              <strong>City discovery</strong>
-              <small>Explore something new</small>
+              <strong>
+                City discovery
+              </strong>
+
+              <small>
+                Explore something
+                new
+              </small>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import DestinationDetails from "./pages/DestinationDetails";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Trips from "./pages/Trips";
+import Favorites from "./pages/Favorites";
 import { AuthProvider } from "./context/AuthContext";
 import "./App.css";
 
@@ -37,6 +38,28 @@ function App() {
             path="/login"
             element={<Login />}
           />
+          {/* Authentication */}
+<Route
+  path="/register"
+  element={<Register />}
+/>
+
+<Route
+  path="/login"
+  element={<Login />}
+/>
+
+{/* Saved destinations */}
+<Route
+  path="/favorites"
+  element={<Favorites />}
+/>
+
+{/* User trips */}
+<Route
+  path="/trips"
+  element={<Trips />}
+/>
 
           {/* User trips */}
           <Route
