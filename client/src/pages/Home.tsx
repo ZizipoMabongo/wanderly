@@ -1,4 +1,8 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type MouseEvent,
+} from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "./Home.css";
@@ -16,6 +20,14 @@ interface Destination {
   priceLevel?: number;
 }
 
+interface DiscoveryDestination {
+  externalId: string;
+  name: string;
+  description: string;
+  image: string;
+  source: string;
+}
+
 interface Favorite {
   _id: string;
   destination: Destination;
@@ -28,6 +40,9 @@ function Home() {
     Destination[]
   >([]);
 
+  const [discoveryResults, setDiscoveryResults] =
+    useState<DiscoveryDestination[]>([]);
+
   const [favorites, setFavorites] = useState<string[]>(
     []
   );
@@ -36,11 +51,14 @@ function Home() {
 
   const [loading, setLoading] = useState(true);
 
+  const [discoveryLoading, setDiscoveryLoading] =
+    useState(false);
+
   const [favoriteLoading, setFavoriteLoading] =
     useState<string | null>(null);
 
   /*
-    Fetch all destinations
+    Fetch destinations stored in MongoDB
   */
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -101,7 +119,8 @@ function Home() {
 
         const savedIds = data
           .filter(
-            (favorite) => favorite.destination
+            (favorite) =>
+              favorite.destination
           )
           .map(
             (favorite) =>
@@ -119,6 +138,69 @@ function Home() {
 
     fetchFavorites();
   }, [token]);
+
+  /*
+    Live destination discovery
+
+    When the user types a search term,
+    ask the backend discovery endpoint
+    for additional destinations.
+  */
+  useEffect(() => {
+    const searchTerm = search.trim();
+
+    /*
+      If the search box is empty, clear
+      discovery results and return to the
+      normal MongoDB destinations.
+    */
+    if (!searchTerm) {
+      setDiscoveryResults([]);
+      setDiscoveryLoading(false);
+      return;
+    }
+
+    /*
+      Wait briefly before sending the request.
+      This prevents a request being sent for
+      every single keystroke.
+    */
+    const timeout = setTimeout(async () => {
+      try {
+        setDiscoveryLoading(true);
+
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/discovery/search?q=${encodeURIComponent(
+            searchTerm
+          )}`
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to discover destinations"
+          );
+        }
+
+        const data: DiscoveryDestination[] =
+          await response.json();
+
+        setDiscoveryResults(data);
+      } catch (error) {
+        console.error(
+          "Destination discovery error:",
+          error
+        );
+
+        setDiscoveryResults([]);
+      } finally {
+        setDiscoveryLoading(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   /*
     Add or remove a destination from favorites
@@ -144,7 +226,9 @@ function Home() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/favorites/${destinationId}`,
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/favorites/${destinationId}`,
         {
           method: isFavorite
             ? "DELETE"
@@ -195,15 +279,11 @@ function Home() {
   };
 
   /*
-    Search destinations
+    Search MongoDB destinations locally.
 
-    Searches through:
-    - destination name
-    - city/location
-    - country
-    - description
-    - category
-    - tags
+    These results are used when the search
+    matches destinations already stored
+    in our database.
   */
   const searchTerm = search
     .trim()
@@ -212,7 +292,6 @@ function Home() {
   const filteredDestinations =
     destinations.filter(
       (destination) => {
-        // Show everything when search is empty
         if (!searchTerm) {
           return true;
         }
@@ -234,6 +313,18 @@ function Home() {
         );
       }
     );
+
+  /*
+    Decide which results to display.
+
+    Empty search:
+      MongoDB destinations
+
+    Search:
+      Discovery API results
+  */
+  const showingDiscovery =
+    searchTerm.length > 0;
 
   return (
     <main className="home-page">
@@ -345,27 +436,40 @@ function Home() {
         <div className="section-heading">
           <div>
             <span className="section-label">
-              EXPLORE THE WORLD
+              {showingDiscovery
+                ? "LIVE DESTINATION DISCOVERY"
+                : "EXPLORE THE WORLD"}
             </span>
 
             <h2>
-              Find your next
-              <span>
-                {" "}
-                adventure.
-              </span>
+              {showingDiscovery
+                ? "Search results for "
+                : "Find your next"}
+
+              {showingDiscovery && (
+                <span>
+                  "{search}"
+                </span>
+              )}
+
+              {!showingDiscovery && (
+                <span>
+                  {" "}
+                  adventure.
+                </span>
+              )}
             </h2>
           </div>
 
           <p>
-            From vibrant cities to peaceful
-            escapes, discover destinations that
-            inspire your next journey.
+            {showingDiscovery
+              ? "Discover destinations from our live travel discovery service."
+              : "From vibrant cities to peaceful escapes, discover destinations that inspire your next journey."}
           </p>
         </div>
 
-        {/* LOADING */}
-        {loading ? (
+        {/* MONGODB LOADING */}
+        {loading && !showingDiscovery ? (
           <div className="loading-state">
             <div className="loading-spinner" />
 
@@ -374,7 +478,123 @@ function Home() {
               destinations...
             </p>
           </div>
-        ) : /* NO SEARCH RESULTS */
+        ) : discoveryLoading ? (
+          /* DISCOVERY LOADING */
+          <div className="loading-state">
+            <div className="loading-spinner" />
+
+            <p>
+              Searching the world for
+              "{search}"...
+            </p>
+          </div>
+        ) : showingDiscovery ? (
+          /* DISCOVERY RESULTS */
+          discoveryResults.length ===
+          0 ? (
+            <div className="empty-state">
+              <div>🌍</div>
+
+              <h3>
+                No destinations found
+              </h3>
+
+              <p>
+                We couldn't find a
+                destination matching
+                "{search}".
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSearch("")
+                }
+              >
+                Show all destinations
+              </button>
+            </div>
+          ) : (
+            <div className="destination-grid">
+              {discoveryResults.map(
+                (destination) => (
+                  <div
+                    key={
+                      destination.externalId
+                    }
+                    className="destination-card"
+                  >
+                    <div className="destination-image-wrapper">
+                      {destination.image ? (
+                        <img
+                          src={
+                            destination.image
+                          }
+                          alt={
+                            destination.name
+                          }
+                          className="destination-image"
+                        />
+                      ) : (
+                        <div className="destination-image">
+                          🌍
+                        </div>
+                      )}
+
+                      <div className="destination-image-overlay" />
+
+                      <span className="destination-category">
+                        DISCOVERED
+                      </span>
+
+                      <span className="destination-arrow">
+                        →
+                      </span>
+                    </div>
+
+                    <div className="destination-card-content">
+                      <div className="destination-location">
+                        🌍 Wikipedia
+                      </div>
+
+                      <h3>
+                        {
+                          destination.name
+                        }
+                      </h3>
+
+                      <p
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            destination.description,
+                        }}
+                      />
+
+                      <div className="destination-card-footer">
+                        <span>
+                          🌐
+                        </span>
+
+                        <div>
+                          <strong>
+                            Live discovery
+                          </strong>
+
+                          <small>
+                            Source:{" "}
+                            {
+                              destination.source
+                            }
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          )
+        ) : /* NORMAL MONGODB DESTINATIONS */
         filteredDestinations.length ===
           0 ? (
           <div className="empty-state">
@@ -385,8 +605,9 @@ function Home() {
             </h3>
 
             <p>
-              We couldn't find a destination
-              matching "{search}".
+              We couldn't find a
+              destination matching
+              "{search}".
             </p>
 
             <button
@@ -399,7 +620,6 @@ function Home() {
             </button>
           </div>
         ) : (
-          /* DESTINATION GRID */
           <div className="destination-grid">
             {filteredDestinations.map(
               (destination) => {
@@ -416,7 +636,6 @@ function Home() {
                     to={`/destinations/${destination._id}`}
                     className="destination-card"
                   >
-                    {/* IMAGE */}
                     <div className="destination-image-wrapper">
                       <img
                         src={
@@ -430,7 +649,6 @@ function Home() {
 
                       <div className="destination-image-overlay" />
 
-                      {/* CATEGORY */}
                       {destination.category && (
                         <span className="destination-category">
                           {
@@ -439,7 +657,6 @@ function Home() {
                         </span>
                       )}
 
-                      {/* FAVORITE */}
                       <button
                         type="button"
                         className={`favorite-button ${
@@ -470,17 +687,17 @@ function Home() {
                       </button>
 
                       <span className="destination-arrow">
-                        ↗
+                        →
                       </span>
                     </div>
 
-                    {/* CARD CONTENT */}
                     <div className="destination-card-content">
                       <div className="destination-location">
                         📍{" "}
                         {
                           destination.location
                         }
+
                         {destination.country &&
                           `, ${destination.country}`}
                       </div>
@@ -497,7 +714,6 @@ function Home() {
                         }
                       </p>
 
-                      {/* TAGS */}
                       {destination.tags &&
                         destination.tags
                           .length >
@@ -529,14 +745,20 @@ function Home() {
 
                       <div className="destination-card-footer">
                         <span>
-                          ⭐{" "}
-                          {destination.rating ||
-                            "4.8"}
+                          ⭐
                         </span>
 
-                        <span className="discover-link">
-                          Discover →
-                        </span>
+                        <div>
+                          <strong>
+                            {destination.rating ||
+                              "5.0"}
+                          </strong>
+
+                          <small>
+                            Traveller
+                            rating
+                          </small>
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -545,88 +767,6 @@ function Home() {
             )}
           </div>
         )}
-      </section>
-
-      {/* EXPERIENCE SECTION */}
-      <section className="experience-section">
-        <div className="experience-content">
-          <span className="section-label">
-            MORE THAN A DESTINATION
-          </span>
-
-          <h2>
-            Travel is about
-            <span>
-              {" "}
-              the stories.
-            </span>
-          </h2>
-
-          <p>
-            Wanderly helps you discover places
-            that become memories. Find
-            destinations, explore experiences,
-            and create journeys worth
-            remembering.
-          </p>
-
-          <Link
-            to="/register"
-            className="experience-button"
-          >
-            Start exploring
-            <span>→</span>
-          </Link>
-        </div>
-
-        <div className="experience-decoration">
-          <div className="floating-card card-one">
-            <span>🌴</span>
-
-            <div>
-              <strong>
-                Beach escape
-              </strong>
-
-              <small>
-                Paradise awaits
-              </small>
-            </div>
-          </div>
-
-          <div className="floating-card card-two">
-            <span>🏔️</span>
-
-            <div>
-              <strong>
-                Mountain adventure
-              </strong>
-
-              <small>
-                Find your wild
-              </small>
-            </div>
-          </div>
-
-          <div className="floating-card card-three">
-            <span>🌆</span>
-
-            <div>
-              <strong>
-                City discovery
-              </strong>
-
-              <small>
-                Explore something
-                new
-              </small>
-            </div>
-          </div>
-
-          <div className="experience-circle">
-            ✈️
-          </div>
-        </div>
       </section>
     </main>
   );

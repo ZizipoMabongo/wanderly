@@ -8,6 +8,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const destinationRoutes = require("./routes/destinations");
+const discoveryRoutes = require("./routes/discovery");
 const authRoutes = require("./routes/auth");
 const favoritesRoutes = require("./routes/favorites");
 const tripsRoutes = require("./routes/trips");
@@ -52,6 +53,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/destinations", destinationRoutes);
+app.use("/api/discovery", discoveryRoutes);
 
 app.use("/api/auth", authRoutes);
 
