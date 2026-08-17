@@ -1,12 +1,21 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
+
 import Navbar from "./components/Navbar";
+
 import Home from "./pages/Home";
 import DestinationDetails from "./pages/DestinationDetails";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Trips from "./pages/Trips";
+import TripDetails from "./pages/TripDetails";
 import Favorites from "./pages/Favorites";
+
 import { AuthProvider } from "./context/AuthContext";
+
 import "./App.css";
 
 function App() {
@@ -16,16 +25,28 @@ function App() {
         <Navbar />
 
         <Routes>
-          {/* Home */}
-          <Route path="/" element={<Home />} />
+          {/* =========================================
+              HOME
+          ========================================= */}
 
-          {/* Destination details */}
+          <Route
+            path="/"
+            element={<Home />}
+          />
+
+          {/* =========================================
+              DESTINATION DETAILS
+          ========================================= */}
+
           <Route
             path="/destinations/:id"
             element={<DestinationDetails />}
           />
 
-          {/* Authentication */}
+          {/* =========================================
+              AUTHENTICATION
+          ========================================= */}
+
           <Route
             path="/register"
             element={<Register />}
@@ -36,18 +57,37 @@ function App() {
             element={<Login />}
           />
 
-          {/* Saved destinations */}
+          {/* =========================================
+              SAVED DESTINATIONS
+          ========================================= */}
+
           <Route
             path="/favorites"
             element={<Favorites />}
           />
 
-          {/* User trips */}
+          {/* =========================================
+              USER TRIPS
+          ========================================= */}
+
           <Route
             path="/trips"
             element={<Trips />}
           />
+
+          {/* =========================================
+              TRIP DETAILS / EDIT
+          ========================================= */}
+
+          <Route
+            path="/trips/:id"
+            element={<TripDetails />}
+          />
         </Routes>
+
+        {/* =========================================
+            FOOTER
+        ========================================= */}
 
         <footer id="about">
           <div className="footer-logo">
