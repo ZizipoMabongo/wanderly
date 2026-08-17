@@ -1,41 +1,37 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import "./Favorites.css";
+import { useNavigate } from "react-router-dom";
 
-interface Destination {
+type Trip = {
   _id: string;
-  name: string;
-  country: string;
-  description: string;
-  image: string;
-  category?: string;
-  rating?: number;
-}
+  destination: string;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+};
 
-interface Favorite {
-  _id: string;
-  destination: Destination;
-}
-
-function Favorites() {
+function Trips() {
   const navigate = useNavigate();
 
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
-  const [removing, setRemoving] = useState<string | null>(null);
-
-  const token = localStorage.getItem("wanderly_token");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    const fetchTrips = async () => {
+      const token = localStorage.getItem("wanderly_token");
 
-    const fetchFavorites = async () => {
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       try {
+        setLoading(true);
+        setError("");
+
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/favorites`,
+          `${import.meta.env.VITE_API_URL}/api/trips`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -43,38 +39,52 @@ function Favorites() {
           }
         );
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error("Failed to fetch saved destinations");
+          throw new Error(
+            data.message || "Failed to load trips"
+          );
         }
 
-        const data: Favorite[] = await response.json();
-
-        setFavorites(data);
+        setTrips(data);
       } catch (error) {
-        console.error(
-          "Failed to fetch favorites:",
-          error
+        console.error("Failed to load trips:", error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load trips"
         );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFavorites();
-  }, [navigate, token]);
+    fetchTrips();
+  }, [navigate]);
 
-  const removeFavorite = async (
-    destinationId: string
-  ) => {
-    if (!token) {
+  const handleDelete = async (tripId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this trip?"
+    );
+
+    if (!confirmed) {
       return;
     }
 
-    setRemoving(destinationId);
+    const token = localStorage.getItem("wanderly_token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    setDeleting(tripId);
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/favorites/${destinationId}`,
+        `${import.meta.env.VITE_API_URL}/api/trips/${tripId}`,
         {
           method: "DELETE",
           headers: {
@@ -86,160 +96,86 @@ function Favorites() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(
-          data.message ||
-            "Failed to remove destination"
+        throw new Error(
+          data.message || "Failed to delete trip"
         );
-        return;
       }
 
-      setFavorites((current) =>
-        current.filter(
-          (favorite) =>
-            favorite.destination._id !== destinationId
+      setTrips((currentTrips) =>
+        currentTrips.filter(
+          (trip) => trip._id !== tripId
         )
       );
     } catch (error) {
-      console.error(
-        "Remove favorite error:",
-        error
-      );
+      console.error("Delete trip error:", error);
 
-      alert(
-        "Unable to remove saved destination."
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete trip"
       );
     } finally {
-      setRemoving(null);
+      setDeleting(null);
     }
   };
 
   if (loading) {
     return (
-      <main className="favorites-page">
-        <div className="favorites-state">
-          <div className="loading-spinner" />
-
-          <p>Loading your saved destinations...</p>
-        </div>
+      <main>
+        <p>Loading your trips...</p>
       </main>
     );
   }
 
   return (
-    <main className="favorites-page">
-      <section className="favorites-header">
-        <span className="section-label">
-          YOUR JOURNEY
-        </span>
+    <main>
+      <h1>My Trips</h1>
 
-        <h1>
-          Saved <span>destinations.</span>
-        </h1>
+      {error && (
+        <div>
+          {error}
+        </div>
+      )}
 
-        <p>
-          Keep the places that inspire you close.
-          Your next adventure might already be here.
-        </p>
-      </section>
-
-      {favorites.length === 0 ? (
-        <section className="favorites-empty">
-          <div className="favorites-empty-icon">
-            ♡
-          </div>
-
-          <h2>No saved destinations yet</h2>
-
-          <p>
-            Start exploring Wanderly and save the
-            places you'd love to visit.
-          </p>
-
-          <Link
-            to="/"
-            className="favorites-explore-button"
-          >
-            Explore destinations
-            <span>→</span>
-          </Link>
-        </section>
+      {trips.length === 0 ? (
+        <p>You don't have any trips yet.</p>
       ) : (
-        <section className="favorites-grid">
-          {favorites.map((favorite) => {
-            const destination =
-              favorite.destination;
+        <div>
+          {trips.map((trip) => (
+            <div key={trip._id}>
+              <h2>{trip.destination}</h2>
 
-            return (
-              <article
-                key={favorite._id}
-                className="favorite-card"
+              <p>
+                {new Date(
+                  trip.startDate
+                ).toLocaleDateString()}{" "}
+                -{" "}
+                {new Date(
+                  trip.endDate
+                ).toLocaleDateString()}
+              </p>
+
+              {trip.notes && <p>{trip.notes}</p>}
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleDelete(trip._id)
+                }
+                disabled={
+                  deleting === trip._id
+                }
               >
-                <Link
-                  to={`/destinations/${destination._id}`}
-                  className="favorite-image-wrapper"
-                >
-                  <img
-                    src={destination.image}
-                    alt={destination.name}
-                    className="favorite-image"
-                  />
-
-                  <div className="favorite-image-overlay" />
-
-                  {destination.category && (
-                    <span className="favorite-category">
-                      {destination.category}
-                    </span>
-                  )}
-                </Link>
-
-                <div className="favorite-card-content">
-                  <div className="favorite-location">
-                    📍 {destination.country}
-                  </div>
-
-                  <Link
-                    to={`/destinations/${destination._id}`}
-                    className="favorite-title"
-                  >
-                    <h2>{destination.name}</h2>
-                  </Link>
-
-                  <p>
-                    {destination.description}
-                  </p>
-
-                  <div className="favorite-footer">
-                    <span className="favorite-rating">
-                      ⭐{" "}
-                      {destination.rating || "4.8"}
-                    </span>
-
-                    <button
-                      type="button"
-                      className="remove-favorite-button"
-                      onClick={() =>
-                        removeFavorite(
-                          destination._id
-                        )
-                      }
-                      disabled={
-                        removing === destination._id
-                      }
-                    >
-                      {removing === destination._id
-                        ? "Removing..."
-                        : "♥ Remove"}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
+                {deleting === trip._id
+                  ? "Deleting..."
+                  : "Delete Trip"}
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </main>
   );
 }
 
-export default Favorites;
+export default Trips;

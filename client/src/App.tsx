@@ -17,10 +17,7 @@ function App() {
 
         <Routes>
           {/* Home */}
-          <Route
-            path="/"
-            element={<Home />}
-          />
+          <Route path="/" element={<Home />} />
 
           {/* Destination details */}
           <Route
@@ -38,28 +35,12 @@ function App() {
             path="/login"
             element={<Login />}
           />
-          {/* Authentication */}
-<Route
-  path="/register"
-  element={<Register />}
-/>
 
-<Route
-  path="/login"
-  element={<Login />}
-/>
-
-{/* Saved destinations */}
-<Route
-  path="/favorites"
-  element={<Favorites />}
-/>
-
-{/* User trips */}
-<Route
-  path="/trips"
-  element={<Trips />}
-/>
+          {/* Saved destinations */}
+          <Route
+            path="/favorites"
+            element={<Favorites />}
+          />
 
           {/* User trips */}
           <Route

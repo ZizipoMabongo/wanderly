@@ -7,44 +7,43 @@ function Navbar() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
+
   const handleLogout = () => {
     logout();
-    setMenuOpen(false);
+    closeMenu();
   };
 
   return (
     <header className="navbar">
       <div className="navbar-container">
+        {/* Wanderly Logo / Home */}
         <Link
           to="/"
           className="navbar-logo"
-          onClick={() => setMenuOpen(false)}
+          onClick={closeMenu}
         >
           wander<span>ly</span>
         </Link>
 
-        <nav
-          className={`navbar-links ${
-            menuOpen ? "open" : ""
-          }`}
-        >
-          <Link
-            to="/"
-            onClick={() => setMenuOpen(false)}
-          >
+        {/* Main Navigation */}
+        <nav className={`navbar-links ${menuOpen ? "open" : ""}`}>
+          <Link to="/" onClick={closeMenu}>
             Explore
           </Link>
 
           <a
             href="/#destinations"
-            onClick={() => setMenuOpen(false)}
+            onClick={closeMenu}
           >
             Destinations
           </a>
 
           <a
             href="/#about"
-            onClick={() => setMenuOpen(false)}
+            onClick={closeMenu}
           >
             About
           </a>
@@ -52,21 +51,23 @@ function Navbar() {
           {user && (
             <>
               <Link
-                to="/favorites"
-                onClick={() => setMenuOpen(false)}
-              >
-                ♥ Saved
-              </Link>
+  to="/favorites"
+  onClick={closeMenu}
+  className="mobile-saved-link"
+>
+  ♥ Saved
+</Link>
 
               <Link
                 to="/trips"
-                onClick={() => setMenuOpen(false)}
+                onClick={closeMenu}
               >
                 My Trips
               </Link>
             </>
           )}
 
+          {/* Mobile Authentication */}
           <div className="mobile-auth">
             {user ? (
               <button
@@ -80,14 +81,14 @@ function Navbar() {
               <>
                 <Link
                   to="/login"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenu}
                 >
                   Sign in
                 </Link>
 
                 <Link
                   to="/register"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenu}
                   className="mobile-register"
                 >
                   Get started
@@ -97,6 +98,7 @@ function Navbar() {
           </div>
         </nav>
 
+        {/* Desktop Actions */}
         <div className="navbar-actions">
           {user ? (
             <>
@@ -110,9 +112,7 @@ function Navbar() {
               <div className="user-menu">
                 <div className="user-avatar">
                   {user.name
-                    ? user.name
-                        .charAt(0)
-                        .toUpperCase()
+                    ? user.name.charAt(0).toUpperCase()
                     : "U"}
                 </div>
 
@@ -148,11 +148,13 @@ function Navbar() {
           )}
         </div>
 
+        {/* Mobile Menu Button */}
         <button
           type="button"
           className="menu-button"
           aria-label="Toggle navigation"
-          onClick={() => setMenuOpen(!menuOpen)}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((previous) => !previous)}
         >
           <span />
           <span />

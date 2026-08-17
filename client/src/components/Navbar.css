@@ -27,7 +27,9 @@
   gap: 30px;
 }
 
-/* Logo */
+/* =========================================
+   LOGO
+   ========================================= */
 
 .navbar-logo {
   flex-shrink: 0;
@@ -45,7 +47,9 @@
   color: #f97316;
 }
 
-/* Main navigation */
+/* =========================================
+   MAIN NAVIGATION
+   ========================================= */
 
 .navbar-links {
   display: flex;
@@ -93,7 +97,17 @@
   width: 100%;
 }
 
-/* Right side */
+/* =========================================
+   MOBILE-ONLY SAVED LINK
+   ========================================= */
+
+.mobile-saved-link {
+  display: none;
+}
+
+/* =========================================
+   RIGHT SIDE / DESKTOP ACTIONS
+   ========================================= */
 
 .navbar-actions {
   display: flex;
@@ -101,7 +115,34 @@
   gap: 12px;
 }
 
-/* Sign in */
+/* Saved button */
+
+.saved-button {
+  padding: 9px 12px;
+
+  color: #475569;
+
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.saved-button:hover {
+  color: #0f766e;
+
+  background: #f0fdfa;
+
+  border-radius: 8px;
+}
+
+/* =========================================
+   SIGN IN
+   ========================================= */
 
 .signin-button {
   padding: 10px 13px;
@@ -120,7 +161,9 @@
   color: #0f766e;
 }
 
-/* Get started */
+/* =========================================
+   GET STARTED
+   ========================================= */
 
 .register-button {
   padding: 11px 18px;
@@ -154,7 +197,9 @@
     0 9px 22px rgba(15, 118, 110, 0.25);
 }
 
-/* User */
+/* =========================================
+   USER
+   ========================================= */
 
 .user-menu {
   display: flex;
@@ -226,7 +271,9 @@
   color: #dc2626;
 }
 
-/* Mobile menu button */
+/* =========================================
+   MOBILE MENU BUTTON
+   ========================================= */
 
 .menu-button {
   display: none;
@@ -257,7 +304,10 @@
   background: #0f766e;
 }
 
-/* Hidden on desktop */
+/* =========================================
+   MOBILE AUTH
+   Hidden on desktop
+   ========================================= */
 
 .mobile-auth {
   display: none;
@@ -273,14 +323,17 @@
     padding: 0 20px;
   }
 
+  /* Hide desktop actions */
   .navbar-actions {
     display: none;
   }
 
+  /* Show hamburger */
   .menu-button {
     display: block;
   }
 
+  /* Mobile navigation menu */
   .navbar-links {
     position: absolute;
 
@@ -309,11 +362,15 @@
     backdrop-filter: blur(15px);
   }
 
+  /* Show menu when opened */
   .navbar-links.open {
     display: flex;
   }
 
+  /* Mobile navigation links */
   .navbar-links > a {
+    display: block;
+
     padding: 14px 12px;
 
     border-radius: 9px;
@@ -327,6 +384,12 @@
     display: none;
   }
 
+  /* Show Saved inside mobile menu */
+  .mobile-saved-link {
+    display: block;
+  }
+
+  /* Mobile authentication */
   .mobile-auth {
     display: flex;
 
