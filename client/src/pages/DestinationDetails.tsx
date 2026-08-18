@@ -34,10 +34,18 @@ function DestinationDetails() {
   const [saveError, setSaveError] = useState("");
 
   /*
-    Fetch destination details
-  */
+   * =========================================
+   * FETCH DESTINATION
+   * =========================================
+   */
+
   useEffect(() => {
     const fetchDestination = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/destinations/${id}`
@@ -66,12 +74,11 @@ function DestinationDetails() {
   }, [id]);
 
   /*
-    Check whether this destination is already saved
+   * =========================================
+   * CHECK IF DESTINATION IS ALREADY SAVED
+   * =========================================
+   */
 
-    The Favorites API gives us all saved destinations,
-    so we check whether the current destination exists
-    in that list.
-  */
   useEffect(() => {
     const checkFavorite = async () => {
       if (!token || !id) {
@@ -83,6 +90,7 @@ function DestinationDetails() {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/favorites`,
           {
+            method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -90,6 +98,10 @@ function DestinationDetails() {
         );
 
         if (!response.ok) {
+          console.error(
+            "Failed to fetch saved destinations"
+          );
+
           return;
         }
 
@@ -115,8 +127,11 @@ function DestinationDetails() {
   }, [id, token]);
 
   /*
-    Save or remove destination
-  */
+   * =========================================
+   * SAVE / REMOVE DESTINATION
+   * =========================================
+   */
+
   const handleSave = async () => {
     if (!token) {
       navigate("/login");
@@ -131,10 +146,11 @@ function DestinationDetails() {
     setSaveError("");
 
     try {
+      /*
+       * REMOVE FROM SAVED
+       */
+
       if (isSaved) {
-        /*
-          Remove saved destination
-        */
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/favorites/${id}`,
           {
@@ -155,35 +171,39 @@ function DestinationDetails() {
         }
 
         setIsSaved(false);
-      } else {
-        /*
-          Save destination
 
-          IMPORTANT:
-          The backend expects the destination ID
-          in the URL.
-        */
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/destinations/${id}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Failed to save destination"
-          );
-        }
-
-        setIsSaved(true);
+        return;
       }
+
+      /*
+       * SAVE DESTINATION
+       *
+       * IMPORTANT:
+       * The correct backend route is:
+       *
+       * POST /api/favorites/:destinationId
+       */
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/favorites/${id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to save destination"
+        );
+      }
+
+      setIsSaved(true);
     } catch (error) {
       console.error(
         "Favorite error:",
@@ -201,8 +221,11 @@ function DestinationDetails() {
   };
 
   /*
-    Loading state
-  */
+   * =========================================
+   * LOADING STATE
+   * =========================================
+   */
+
   if (loading) {
     return (
       <div className="state-message">
@@ -214,13 +237,16 @@ function DestinationDetails() {
   }
 
   /*
-    Destination not found
-  */
+   * =========================================
+   * DESTINATION NOT FOUND
+   * =========================================
+   */
+
   if (!destination) {
     return (
       <div className="state-message">
         <div className="empty-icon">
-          🧭
+          ⚠️
         </div>
 
         <h3>Destination not found</h3>
@@ -232,14 +258,16 @@ function DestinationDetails() {
     );
   }
 
+  /*
+   * =========================================
+   * DESTINATION DETAILS
+   * =========================================
+   */
+
   return (
     <main className="destination-details">
-      <Link
-        to="/"
-        className="back-link"
-      >
-        ← Back to explore
-      </Link>
+
+      {/* HERO IMAGE */}
 
       <div className="details-hero">
         <img
@@ -247,22 +275,31 @@ function DestinationDetails() {
           alt={destination.name}
         />
 
-        <div className="details-overlay">
-          <span className="category-badge">
-            {destination.category}
-          </span>
+        <div className="details-hero-overlay">
+          <Link
+            to="/"
+            className="back-link"
+          >
+            ← Back to Explore
+          </Link>
 
-          <h1>{destination.name}</h1>
+          <div className="details-location">
+            <p>
+              {destination.location},{" "}
+              {destination.country}
+            </p>
 
-          <p>
-            📍 {destination.location},{" "}
-            {destination.country}
-          </p>
+            <h1>{destination.name}</h1>
+          </div>
         </div>
       </div>
 
+      {/* CONTENT */}
+
       <div className="details-content">
+
         <div className="details-main">
+
           <p className="eyebrow">
             ABOUT THIS DESTINATION
           </p>
@@ -275,6 +312,8 @@ function DestinationDetails() {
             {destination.description}
           </p>
 
+          {/* TAGS */}
+
           <div className="tags">
             {destination.tags.map(
               (tag) => (
@@ -284,14 +323,26 @@ function DestinationDetails() {
               )
             )}
           </div>
+
         </div>
 
+        {/* SIDEBAR */}
+
         <aside className="details-sidebar">
+
           <div className="detail-stat">
             <span>Rating</span>
 
             <strong>
               ⭐ {destination.rating}
+            </strong>
+          </div>
+
+          <div className="detail-stat">
+            <span>Category</span>
+
+            <strong>
+              {destination.category}
             </strong>
           </div>
 
@@ -305,9 +356,13 @@ function DestinationDetails() {
             </strong>
           </div>
 
+          {/* SAVE BUTTON */}
+
           <button
             type="button"
-            className="save-button"
+            className={`save-destination-button ${
+              isSaved ? "saved" : ""
+            }`}
             onClick={handleSave}
             disabled={saving}
           >
@@ -315,16 +370,19 @@ function DestinationDetails() {
               ? "Saving..."
               : isSaved
               ? "♥ Saved"
-              : "♡ Save destination"}
+              : "♡ Save Destination"}
           </button>
 
           {saveError && (
-            <p className="auth-error">
+            <p className="save-error">
               {saveError}
             </p>
           )}
+
         </aside>
+
       </div>
+
     </main>
   );
 }
