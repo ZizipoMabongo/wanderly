@@ -26,7 +26,7 @@ interface ReviewSectionProps {
 }
 
 function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +123,7 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
       setFormError("");
 
       const formData = new FormData();
+
       formData.append("rating", String(rating));
       formData.append("placeName", placeName);
       formData.append("text", text);
@@ -155,6 +156,7 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
       }
 
       setReviews((current) => [data, ...current]);
+
       resetForm();
       setShowForm(false);
     } catch (err) {
@@ -166,8 +168,13 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
     }
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files ? Array.from(event.target.files) : [];
+  const handleImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files
+      ? Array.from(event.target.files)
+      : [];
+
     setImages(files.slice(0, 6));
   };
 
@@ -190,8 +197,10 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
       <div className="review-section-header">
         <div>
           <p className="review-eyebrow">TRAVELER REVIEWS</p>
+
           <h2>
             What people are saying
+
             {averageRating && (
               <span className="review-average">
                 ⭐ {averageRating} · {reviews.length}{" "}
@@ -240,11 +249,14 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
           {!token && (
             <div className="review-form-field">
               <label htmlFor="guestName">Your Name</label>
+
               <input
                 id="guestName"
                 type="text"
                 value={guestName}
-                onChange={(event) => setGuestName(event.target.value)}
+                onChange={(event) =>
+                  setGuestName(event.target.value)
+                }
                 placeholder="e.g. Thabo M."
                 required
               />
@@ -253,6 +265,7 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
 
           <div className="review-form-field">
             <label htmlFor="reviewText">Your Review</label>
+
             <textarea
               id="reviewText"
               value={text}
@@ -263,7 +276,10 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
           </div>
 
           <div className="review-form-field">
-            <label htmlFor="reviewImages">Photos (optional, up to 6)</label>
+            <label htmlFor="reviewImages">
+              Photos (optional, up to 6)
+            </label>
+
             <input
               id="reviewImages"
               type="file"
@@ -271,9 +287,11 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
               multiple
               onChange={handleImageChange}
             />
+
             {images.length > 0 && (
               <p className="review-image-count">
-                {images.length} photo{images.length > 1 ? "s" : ""} selected
+                {images.length} photo
+                {images.length > 1 ? "s" : ""} selected
               </p>
             )}
           </div>
@@ -281,20 +299,30 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
           {token && (
             <div className="review-form-field">
               <label htmlFor="visibility">Visibility</label>
+
               <select
                 id="visibility"
                 value={visibility}
                 onChange={(event) =>
-                  setVisibility(event.target.value as "public" | "private")
+                  setVisibility(
+                    event.target.value as "public" | "private"
+                  )
                 }
               >
-                <option value="public">Public — visible to everyone</option>
-                <option value="private">Private — visible only to you</option>
+                <option value="public">
+                  Public — visible to everyone
+                </option>
+
+                <option value="private">
+                  Private — visible only to you
+                </option>
               </select>
             </div>
           )}
 
-          {formError && <p className="review-form-error">{formError}</p>}
+          {formError && (
+            <p className="review-form-error">{formError}</p>
+          )}
 
           <div className="review-form-actions">
             <button
@@ -309,9 +337,13 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
       )}
 
       {loading ? (
-        <p className="review-state-message">Loading reviews...</p>
+        <p className="review-state-message">
+          Loading reviews...
+        </p>
       ) : error ? (
-        <p className="review-state-message review-error">{error}</p>
+        <p className="review-state-message review-error">
+          {error}
+        </p>
       ) : reviews.length === 0 ? (
         <p className="review-state-message">
           No reviews yet — be the first to share your experience.
@@ -319,17 +351,28 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
       ) : (
         <div className="review-list">
           {reviews.map((review) => (
-            <article className="review-card" key={review._id}>
+            <article
+              className="review-card"
+              key={review._id}
+            >
               <div className="review-card-header">
                 <div>
                   <p className="review-author">
-                    {review.user?.name || review.guestName || "Anonymous"}
+                    {review.user?.name ||
+                      review.guestName ||
+                      "Anonymous"}
+
                     {review.visibility === "private" && (
-                      <span className="review-private-tag">Private</span>
+                      <span className="review-private-tag">
+                        Private
+                      </span>
                     )}
                   </p>
+
                   <p className="review-date">
-                    {new Date(review.createdAt).toLocaleDateString("en-ZA", {
+                    {new Date(
+                      review.createdAt
+                    ).toLocaleDateString("en-ZA", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
@@ -344,7 +387,9 @@ function ReviewSection({ placeId, placeName }: ReviewSectionProps) {
               </div>
 
               {review.text && (
-                <p className="review-text">{review.text}</p>
+                <p className="review-text">
+                  {review.text}
+                </p>
               )}
 
               {review.images.length > 0 && (
