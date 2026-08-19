@@ -1,6 +1,7 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import ReviewSection from "../components/ReviewSection";
 
 interface Destination {
   _id: string;
@@ -382,6 +383,13 @@ function DestinationDetails() {
         </aside>
 
       </div>
+
+      {/* REVIEWS */}
+
+      <ReviewSection
+        placeId={destination._id}
+        placeName={destination.name}
+      />
 
     </main>
   );

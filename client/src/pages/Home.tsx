@@ -22,15 +22,20 @@ interface Destination {
 
 interface DiscoveryDestination {
   externalId: string;
+  dataId: string;
   name: string;
   description: string;
+  address: string;
   image: string;
+  rating: number | null;
+  reviewsCount: number | null;
   source: string;
 }
 
 interface Favorite {
   _id: string;
-  destination: Destination;
+  destination?: Destination;
+  placeId?: string;
 }
 
 function Home() {
@@ -46,6 +51,9 @@ function Home() {
   const [favorites, setFavorites] = useState<string[]>(
     []
   );
+
+  const [favoritePlaceIds, setFavoritePlaceIds] =
+    useState<string[]>([]);
 
   const [search, setSearch] = useState("");
 
@@ -124,10 +132,15 @@ function Home() {
           )
           .map(
             (favorite) =>
-              favorite.destination._id
+              favorite.destination!._id
           );
 
+        const savedPlaceIds = data
+          .filter((favorite) => favorite.placeId)
+          .map((favorite) => favorite.placeId as string);
+
         setFavorites(savedIds);
+        setFavoritePlaceIds(savedPlaceIds);
       } catch (error) {
         console.error(
           "Failed to fetch favorites:",
@@ -140,7 +153,7 @@ function Home() {
   }, [token]);
 
   /*
-    Live destination discovery
+    Live destination discovery (SerpAPI / Google Maps)
 
     When the user types a search term,
     ask the backend discovery endpoint
@@ -279,6 +292,74 @@ function Home() {
   };
 
   /*
+    Add or remove a SerpAPI / Google Maps
+    place from favorites
+  */
+  const handleFavoritePlace = async (
+    event: MouseEvent,
+    destination: DiscoveryDestination
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!token) {
+      alert("Please log in to save destinations.");
+      return;
+    }
+
+    setFavoriteLoading(destination.dataId);
+
+    const isFavorite = favoritePlaceIds.includes(
+      destination.dataId
+    );
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/favorites/place/${encodeURIComponent(
+          destination.dataId
+        )}`,
+        {
+          method: isFavorite ? "DELETE" : "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: isFavorite
+            ? undefined
+            : JSON.stringify({
+                placeName: destination.name,
+                placeImage: destination.image,
+                placeLocation: destination.address,
+              }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Something went wrong.");
+        return;
+      }
+
+      if (isFavorite) {
+        setFavoritePlaceIds((current) =>
+          current.filter((id) => id !== destination.dataId)
+        );
+      } else {
+        setFavoritePlaceIds((current) => [
+          ...current,
+          destination.dataId,
+        ]);
+      }
+    } catch (error) {
+      console.error("Favorite place error:", error);
+      alert("Unable to update saved destination.");
+    } finally {
+      setFavoriteLoading(null);
+    }
+  };
+
+  /*
     Search MongoDB destinations locally.
 
     These results are used when the search
@@ -321,7 +402,7 @@ function Home() {
       MongoDB destinations
 
     Search:
-      Discovery API results
+      Discovery API results (SerpAPI / Google Maps)
   */
   const showingDiscovery =
     searchTerm.length > 0;
@@ -463,7 +544,7 @@ function Home() {
 
           <p>
             {showingDiscovery
-              ? "Discover destinations from our live travel discovery service."
+              ? "Discover real destinations and traveler ratings powered by Google Maps."
               : "From vibrant cities to peaceful escapes, discover destinations that inspire your next journey."}
           </p>
         </div>
@@ -489,7 +570,7 @@ function Home() {
             </p>
           </div>
         ) : showingDiscovery ? (
-          /* DISCOVERY RESULTS */
+          /* DISCOVERY RESULTS (SerpAPI / Google Maps) */
           discoveryResults.length ===
           0 ? (
             <div className="empty-state">
@@ -517,11 +598,18 @@ function Home() {
           ) : (
             <div className="destination-grid">
               {discoveryResults.map(
-                (destination) => (
-                  <div
+                (destination) => {
+                  const isPlaceFavorite =
+                    favoritePlaceIds.includes(
+                      destination.dataId
+                    );
+
+                  return (
+                  <Link
                     key={
                       destination.externalId
                     }
+                    to={`/places/${destination.dataId}`}
                     className="destination-card"
                   >
                     <div className="destination-image-wrapper">
@@ -544,8 +632,29 @@ function Home() {
                       <div className="destination-image-overlay" />
 
                       <span className="destination-category">
-                        DISCOVERED
+                        GOOGLE MAPS
                       </span>
+
+                      <button
+                        type="button"
+                        className={`favorite-button ${
+                          isPlaceFavorite ? "saved" : ""
+                        }`}
+                        onClick={(event) =>
+                          handleFavoritePlace(event, destination)
+                        }
+                        aria-label={
+                          isPlaceFavorite
+                            ? "Remove from saved destinations"
+                            : "Save destination"
+                        }
+                      >
+                        {favoriteLoading === destination.dataId
+                          ? "..."
+                          : isPlaceFavorite
+                          ? "♥"
+                          : "♡"}
+                      </button>
 
                       <span className="destination-arrow">
                         →
@@ -554,7 +663,9 @@ function Home() {
 
                     <div className="destination-card-content">
                       <div className="destination-location">
-                        🌍 Wikipedia
+                        📍{" "}
+                        {destination.address ||
+                          "Location unavailable"}
                       </div>
 
                       <h3>
@@ -563,34 +674,35 @@ function Home() {
                         }
                       </h3>
 
-                      <p
-                        dangerouslySetInnerHTML={{
-                          __html:
-                            destination.description,
-                        }}
-                      />
+                      <p>
+                        {
+                          destination.description
+                        }
+                      </p>
 
                       <div className="destination-card-footer">
                         <span>
-                          🌐
+                          ⭐
                         </span>
 
                         <div>
                           <strong>
-                            Live discovery
+                            {destination.rating
+                              ? destination.rating
+                              : "New"}
                           </strong>
 
                           <small>
-                            Source:{" "}
-                            {
-                              destination.source
-                            }
+                            {destination.reviewsCount
+                              ? `${destination.reviewsCount.toLocaleString()} Google reviews`
+                              : "No ratings yet"}
                           </small>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )
+                  </Link>
+                  );
+                }
               )}
             </div>
           )

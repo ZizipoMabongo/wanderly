@@ -20,6 +20,18 @@ interface Destination {
   priceLevel: number;
 }
 
+interface TripReviewImage {
+  url: string;
+  publicId: string;
+}
+
+interface TripReview {
+  rating: number | null;
+  text: string;
+  images: TripReviewImage[];
+  reviewedAt: string | null;
+}
+
 interface Trip {
   _id: string;
   name: string;
@@ -27,6 +39,7 @@ interface Trip {
   startDate: string;
   endDate: string;
   notes?: string;
+  review?: TripReview;
 }
 
 function Trips() {
@@ -57,6 +70,24 @@ function Trips() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+
+  /*
+    =========================================
+    TRIP REVIEW FORM STATE
+    (keyed by trip id, so each card manages
+    its own open/closed + field state)
+    =========================================
+  */
+
+  const [openReviewTripId, setOpenReviewTripId] =
+    useState<string | null>(null);
+
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewImages, setReviewImages] = useState<File[]>([]);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   /*
     =========================================
@@ -310,6 +341,106 @@ function Trips() {
       );
     } finally {
       setDeleting(null);
+    }
+  };
+
+  /*
+    =========================================
+    TRIP REVIEW: OPEN / CLOSE FORM
+    =========================================
+  */
+
+  const toggleReviewForm = (trip: Trip) => {
+    if (openReviewTripId === trip._id) {
+      setOpenReviewTripId(null);
+      return;
+    }
+
+    setOpenReviewTripId(trip._id);
+    setReviewRating(trip.review?.rating || 0);
+    setReviewText(trip.review?.text || "");
+    setReviewImages([]);
+    setReviewError("");
+  };
+
+  const handleReviewImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files
+      ? Array.from(event.target.files)
+      : [];
+
+    setReviewImages(files.slice(0, 6));
+  };
+
+  /*
+    =========================================
+    TRIP REVIEW: SUBMIT
+    =========================================
+  */
+
+  const handleSubmitTripReview = async (
+    event: FormEvent<HTMLFormElement>,
+    tripId: string
+  ) => {
+    event.preventDefault();
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (reviewRating < 1) {
+      setReviewError("Please select a rating.");
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      setReviewError("");
+
+      const formData = new FormData();
+      formData.append("rating", String(reviewRating));
+      formData.append("text", reviewText);
+
+      reviewImages.forEach((file) => {
+        formData.append("images", file);
+      });
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/trips/${tripId}/review`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to save trip review"
+        );
+      }
+
+      setTrips((currentTrips) =>
+        currentTrips.map((trip) =>
+          trip._id === tripId ? data : trip
+        )
+      );
+
+      setOpenReviewTripId(null);
+    } catch (error) {
+      setReviewError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save trip review"
+      );
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -674,16 +805,134 @@ function Trips() {
                   </p>
                 )}
 
+                {/* EXISTING TRIP REVIEW */}
+
+                {trip.review?.rating && (
+                  <div className="trip-review-summary">
+                    <div className="trip-review-summary-header">
+                      <span className="trip-review-stars">
+                        {"★".repeat(trip.review.rating)}
+                        {"☆".repeat(5 - trip.review.rating)}
+                      </span>
+
+                      <span className="trip-review-date">
+                        Reviewed{" "}
+                        {trip.review.reviewedAt &&
+                          new Date(
+                            trip.review.reviewedAt
+                          ).toLocaleDateString("en-ZA", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                      </span>
+                    </div>
+
+                    {trip.review.text && (
+                      <p className="trip-review-text">
+                        {trip.review.text}
+                      </p>
+                    )}
+
+                    {trip.review.images.length > 0 && (
+                      <div className="trip-review-images">
+                        {trip.review.images.map((image) => (
+                          <img
+                            key={image.publicId}
+                            src={image.url}
+                            alt={`${trip.name} photo`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TRIP REVIEW FORM */}
+
+                {openReviewTripId === trip._id && (
+                  <form
+                    className="trip-review-form"
+                    onSubmit={(event) =>
+                      handleSubmitTripReview(event, trip._id)
+                    }
+                  >
+                    <div className="review-star-picker">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className={`review-star ${
+                            star <=
+                            (reviewHoverRating || reviewRating)
+                              ? "filled"
+                              : ""
+                          }`}
+                          onMouseEnter={() =>
+                            setReviewHoverRating(star)
+                          }
+                          onMouseLeave={() =>
+                            setReviewHoverRating(0)
+                          }
+                          onClick={() => setReviewRating(star)}
+                          aria-label={`${star} star`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      value={reviewText}
+                      onChange={(event) =>
+                        setReviewText(event.target.value)
+                      }
+                      placeholder="How did your trip go?"
+                      rows={3}
+                    />
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleReviewImageChange}
+                    />
+
+                    {reviewImages.length > 0 && (
+                      <p className="review-image-count">
+                        {reviewImages.length} photo
+                        {reviewImages.length > 1 ? "s" : ""} selected
+                      </p>
+                    )}
+
+                    {reviewError && (
+                      <p className="review-form-error">
+                        {reviewError}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="trip-primary-button"
+                      disabled={submittingReview}
+                    >
+                      {submittingReview
+                        ? "Saving..."
+                        : "Save Trip Review"}
+                    </button>
+                  </form>
+                )}
+
                 <div className="trip-card-actions">
                   <button
                     className="trip-secondary-button"
-                    onClick={() =>
-                      navigate(
-                        `/trips/${trip._id}`
-                      )
-                    }
+                    onClick={() => toggleReviewForm(trip)}
                   >
-                    View Trip
+                    {openReviewTripId === trip._id
+                      ? "Cancel Review"
+                      : trip.review?.rating
+                      ? "Edit Review"
+                      : "Add Review"}
                   </button>
 
                   <button

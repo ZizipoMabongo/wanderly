@@ -3,9 +3,14 @@ const express = require("express");
 const router = express.Router();
 
 /*
+  =========================================
   GET /api/discovery/search?q=Paris
 
-  Live destination discovery using Wikipedia.
+  Live destination discovery using
+  SerpAPI's Google Maps engine.
+
+  Requires SERPAPI_KEY in server/.env
+  =========================================
 */
 
 router.get("/search", async (req, res) => {
@@ -18,207 +23,142 @@ router.get("/search", async (req, res) => {
       });
     }
 
-    const searchQueries = [
-      `${query} tourist attractions`,
-      `${query} landmarks`,
-      `${query} places to visit`,
-    ];
+    if (!process.env.SERPAPI_KEY) {
+      console.error("SERPAPI_KEY is not defined");
+      return res.status(500).json({
+        message: "Search is not configured",
+      });
+    }
 
-    /*
-      Terms that normally indicate that a result
-      is NOT a tourist destination.
-    */
-    const excludedTerms = [
-      "disambiguation",
-      "film",
-      "album",
-      "song",
-      "actor",
-      "actress",
-      "singer",
-      "football",
-      "basketball",
-      "cricket",
-      "athlete",
-      "politician",
-      "university",
-      "school",
-      "college",
-      "administrative",
-      "district",
-      "municipality",
-      "event",
-      "championship",
-      "olympics",
-      "revolution",
-      "war",
-      "battle",
-      "siege",
-      "commune",
-      "mythology",
-      "personality",
-      "model",
-      "television",
-      "documentary",
-      "syndrome",
-      "company",
-      "business",
-      "airport",
-      "station",
-      "railway",
-      "metro",
-      "subway",
-      "highway",
-      "arena",
-      "stadium",
-      "sports",
-      "architecture of",
-      "history of",
-      "tourism in",
-      "list of",
-      "outline of",
-      "opening ceremony",
-      "paris las vegas",
-      "kiribati",
-    ];
+    const url =
+      `https://serpapi.com/search.json` +
+      `?engine=google_maps` +
+      `&type=search` +
+      `&q=${encodeURIComponent(query + " tourist attractions")}` +
+      `&api_key=${process.env.SERPAPI_KEY}`;
 
-    /*
-      Search Wikipedia.
-    */
-    const results = await Promise.all(
-      searchQueries.map(async (searchQuery) => {
-        const url =
-          `https://en.wikipedia.org/w/rest.php/v1/search/page` +
-          `?q=${encodeURIComponent(searchQuery)}` +
-          `&limit=20`;
+    const response = await fetch(url);
 
-        const response = await fetch(url, {
-          headers: {
-            "User-Agent":
-              "Wanderly Travel App/1.0",
-          },
-        });
+    if (!response.ok) {
+      throw new Error(`SerpAPI returned ${response.status}`);
+    }
 
-        if (!response.ok) {
-          throw new Error(
-            `Wikipedia API returned ${response.status}`
-          );
-        }
+    const data = await response.json();
 
-        return response.json();
-      })
-    );
+    const localResults = data.local_results || [];
 
-    /*
-      Combine all results.
-    */
-    const allPages = results.flatMap(
-      (result) => result.pages || []
-    );
+    const destinations = localResults
+      .filter((place) => place.title && place.place_id)
+      .map((place) => ({
+        externalId: place.place_id,
+        // data_id is what SerpAPI's place-details lookup
+        // actually wants — keep it alongside place_id.
+        dataId: place.data_id || place.place_id,
 
-    /*
-      Remove duplicate pages.
-    */
-    const uniquePages = Array.from(
+        name: place.title,
+
+        description:
+          place.type ||
+          (place.types && place.types[0]) ||
+          "Discover this destination with Wanderly.",
+
+        address: place.address || "",
+
+        image: place.thumbnail || "",
+
+        rating: place.rating || null,
+        reviewsCount: place.reviews || null,
+
+        location:
+          place.gps_coordinates || null,
+
+        source: "google_maps",
+      }));
+
+    // De-duplicate by place_id.
+    const uniqueDestinations = Array.from(
       new Map(
-        allPages.map((page) => [
-          page.id,
-          page,
-        ])
+        destinations.map((d) => [d.externalId, d])
       ).values()
     );
 
-    /*
-      Filter results.
-    */
-    const destinations = uniquePages
-      .filter((page) => {
-        const title = String(
-          page.title || ""
-        ).toLowerCase();
-
-        const description = String(
-          page.description ||
-            page.excerpt ||
-            ""
-        ).toLowerCase();
-
-        const text = `${title} ${description}`;
-
-        /*
-          Remove obviously unrelated content.
-        */
-        if (
-          excludedTerms.some((term) =>
-            text.includes(term)
-          )
-        ) {
-          return false;
-        }
-
-        /*
-          Make sure the search term is relevant.
-        */
-        const normalizedQuery =
-          query.toLowerCase();
-
-        if (
-          !text.includes(normalizedQuery)
-        ) {
-          return false;
-        }
-
-        return true;
-      })
-      .map((page) => ({
-        externalId: String(page.id),
-
-        name: page.title,
-
-        description:
-          page.description ||
-          page.excerpt ||
-          "Discover this destination with Wanderly.",
-
-        image: page.thumbnail?.url
-          ? page.thumbnail.url.startsWith("//")
-            ? `https:${page.thumbnail.url}`
-            : page.thumbnail.url
-          : "",
-
-        source: "wikipedia",
-      }));
-
-    /*
-      Remove duplicate destination names.
-    */
-    const uniqueDestinations =
-      Array.from(
-        new Map(
-          destinations.map(
-            (destination) => [
-              destination.name.toLowerCase(),
-              destination,
-            ]
-          )
-        ).values()
-      );
-
-    /*
-      Return up to 20 results.
-    */
-    res.json(
-      uniqueDestinations.slice(0, 20)
-    );
+    res.json(uniqueDestinations.slice(0, 20));
   } catch (error) {
-    console.error(
-      "Destination discovery error:",
-      error
-    );
+    console.error("Destination discovery error:", error);
 
     res.status(500).json({
-      message:
-        "Failed to discover destinations",
+      message: "Failed to discover destinations",
+    });
+  }
+});
+
+/*
+  =========================================
+  GET /api/discovery/place/:dataId
+
+  Full place details (address, hours, photos,
+  Google rating breakdown) for a single result,
+  used on the destination detail page.
+  =========================================
+*/
+
+router.get("/place/:dataId", async (req, res) => {
+  try {
+    const { dataId } = req.params;
+
+    if (!dataId) {
+      return res.status(400).json({
+        message: "dataId is required",
+      });
+    }
+
+    if (!process.env.SERPAPI_KEY) {
+      console.error("SERPAPI_KEY is not defined");
+      return res.status(500).json({
+        message: "Search is not configured",
+      });
+    }
+
+    const url =
+      `https://serpapi.com/search.json` +
+      `?engine=google_maps` +
+      `&data_id=${encodeURIComponent(dataId)}` +
+      `&api_key=${process.env.SERPAPI_KEY}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`SerpAPI returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const place = data.place_results;
+
+    if (!place) {
+      return res.status(404).json({
+        message: "Place not found",
+      });
+    }
+
+    res.json({
+      externalId: place.place_id,
+      dataId: place.data_id,
+      name: place.title,
+      address: place.address || "",
+      description: place.description || "",
+      rating: place.rating || null,
+      reviewsCount: place.reviews || null,
+      images: (place.images || []).map((img) => img.thumbnail || img.image),
+      hours: place.hours || null,
+      location: place.gps_coordinates || null,
+      website: place.website || "",
+      phone: place.phone || "",
+    });
+  } catch (error) {
+    console.error("Place details error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch place details",
     });
   }
 });

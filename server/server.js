@@ -13,6 +13,7 @@ const discoveryRoutes = require("./routes/discovery");
 const authRoutes = require("./routes/auth");
 const favoritesRoutes = require("./routes/favorites");
 const tripsRoutes = require("./routes/trips");
+const reviewRoutes = require("./routes/reviews");
 
 const app = express();
 
@@ -43,26 +44,14 @@ const corsOptions = {
 
     console.log("Blocked CORS origin:", origin);
 
-    return callback(
-      new Error("Not allowed by CORS")
-    );
+    return callback(new Error("Not allowed by CORS"));
   },
 
   credentials: true,
 
-  methods: [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-  ],
+  allowedHeaders: ["Content-Type", "Authorization"],
 
   optionsSuccessStatus: 204,
 };
@@ -90,30 +79,12 @@ app.get("/", (req, res) => {
    API ROUTES
 ========================================= */
 
-app.use(
-  "/api/destinations",
-  destinationRoutes
-);
-
-app.use(
-  "/api/discovery",
-  discoveryRoutes
-);
-
-app.use(
-  "/api/auth",
-  authRoutes
-);
-
-app.use(
-  "/api/favorites",
-  favoritesRoutes
-);
-
-app.use(
-  "/api/trips",
-  tripsRoutes
-);
+app.use("/api/destinations", destinationRoutes);
+app.use("/api/discovery", discoveryRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/favorites", favoritesRoutes);
+app.use("/api/trips", tripsRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 /* =========================================
    404 HANDLER
@@ -153,9 +124,7 @@ const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {
   console.error("❌ MONGO_URI is not defined");
-  console.error(
-    "Make sure server/.env contains MONGO_URI=..."
-  );
+  console.error("Make sure server/.env contains MONGO_URI=...");
   process.exit(1);
 }
 
@@ -168,42 +137,21 @@ mongoose
   .then(() => {
     console.log("=================================");
     console.log("✅ MongoDB connected successfully");
-    console.log(
-      `📦 Database: ${mongoose.connection.name}`
-    );
-    console.log(
-      `🌐 MongoDB host: ${mongoose.connection.host}`
-    );
+    console.log(`📦 Database: ${mongoose.connection.name}`);
+    console.log(`🌐 MongoDB host: ${mongoose.connection.host}`);
     console.log("=================================");
 
     app.listen(PORT, () => {
-      console.log(
-        `🚀 Wanderly API running on http://localhost:${PORT}`
-      );
-
-      console.log(
-        `📍 Destinations: http://localhost:${PORT}/api/destinations`
-      );
-
-      console.log(
-        `❤️ Favorites: http://localhost:${PORT}/api/favorites`
-      );
-
-      console.log(
-        `🗺️ Trips: http://localhost:${PORT}/api/trips`
-      );
-
-      console.log(
-        `🔐 Auth: http://localhost:${PORT}/api/auth`
-      );
+      console.log(`🚀 Wanderly API running on http://localhost:${PORT}`);
+      console.log(`📍 Discovery: http://localhost:${PORT}/api/discovery`);
+      console.log(`⭐ Reviews: http://localhost:${PORT}/api/reviews`);
+      console.log(`❤️ Favorites: http://localhost:${PORT}/api/favorites`);
+      console.log(`🗺️ Trips: http://localhost:${PORT}/api/trips`);
+      console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
     });
   })
   .catch((error) => {
-    console.error(
-      "❌ MongoDB connection failed:"
-    );
-
+    console.error("❌ MongoDB connection failed:");
     console.error(error.message);
-
     process.exit(1);
   });

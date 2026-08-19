@@ -639,3 +639,134 @@
     padding: 55px 20px;
   }
 }
+
+/* =========================================================
+   TRIP REVIEW (ADDED)
+   ========================================================= */
+
+.trip-review-summary {
+  padding: 16px;
+  margin-bottom: 17px;
+  border-radius: 12px;
+  background: #f3f8f6;
+}
+
+.trip-review-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.trip-review-stars {
+  color: #e0a944;
+  font-size: 0.95rem;
+}
+
+.trip-review-date {
+  font-size: 0.78rem;
+  color: #8ba19d;
+}
+
+.trip-review-text {
+  margin: 0 0 10px;
+  color: #4a5f5b;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.trip-review-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trip-review-images img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e3ece9;
+}
+
+.trip-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 17px;
+  border: 1px solid #e3ece9;
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+
+.trip-review-form .review-star-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.trip-review-form .review-star {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  color: #d8e5e1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.trip-review-form .review-star:hover {
+  transform: scale(1.1);
+}
+
+.trip-review-form .review-star.filled {
+  color: #e0a944;
+}
+
+.trip-review-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border: 1px solid #d8e5e1;
+  border-radius: 10px;
+  background: white;
+  color: #173f3a;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+}
+
+.trip-review-form textarea:focus {
+  border-color: #4f8f87;
+  box-shadow: 0 0 0 4px rgba(79, 143, 135, 0.11);
+}
+
+.trip-review-form input[type="file"] {
+  font-size: 0.85rem;
+  color: #647a76;
+}
+
+.trip-review-form .review-image-count {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #4f8f87;
+}
+
+.trip-review-form .review-form-error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #efcaca;
+  border-radius: 10px;
+  background: #fff6f6;
+  color: #9c3e3e;
+  font-size: 0.84rem;
+}
+
+.trip-review-form .trip-primary-button {
+  align-self: flex-start;
+}
